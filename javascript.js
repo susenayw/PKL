@@ -54,8 +54,21 @@ function setupEventListeners() {
     // Deteksi perubahan Kode Rekening (Auto-populate "yang lain-lain")
     selectKode.addEventListener("change", handleRekeningChange);
 
-    // Deteksi input angka pengeluaran (Penghitungan sisa anggaran real-time)
-    inputPengeluaran.addEventListener("input", calculateRealtimeBudget);
+    // Format input angka secara real-time dan hitung anggaran
+    inputPengeluaran.addEventListener("input", function(e) {
+        // Hapus semua karakter selain angka
+        let rawValue = this.value.replace(/[^0-9]/g, '');
+        
+        // Format kembali menjadi standar ribuan Indonesia (menggunakan titik)
+        if (rawValue !== "") {
+            this.value = new Intl.NumberFormat('id-ID').format(rawValue);
+        } else {
+            this.value = "";
+        }
+        
+        // Panggil fungsi kalkulasi setelah format selesai
+        calculateRealtimeBudget();
+    });
 
     // Simulasi penyimpanan data saat disubmit
     formBKU.addEventListener("submit", function(e) {
@@ -93,7 +106,11 @@ function calculateRealtimeBudget() {
 
     if (selectedKode && databaseSPJ[selectedKode]) {
         const totalAnggaran = databaseSPJ[selectedKode].anggaran;
-        const pengeluaranValue = parseFloat(inputPengeluaran.value) || 0;
+        
+        // Hapus titik sebelum mengubah string menjadi angka (Float) untuk dihitung
+        const cleanValue = inputPengeluaran.value.replace(/\./g, ''); 
+        const pengeluaranValue = parseFloat(cleanValue) || 0;
+        
         const sisa = totalAnggaran - pengeluaranValue;
 
         sisaSpan.textContent = formatRupiah(sisa);
