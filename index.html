@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Integrasi BKU & SPJ Belanja - Diskominfo Sumut</title>
+    <!-- Menghubungkan ke file CSS eksternal -->
+    <link rel="stylesheet" href="indexstyle.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Dinas Komunikasi dan Informatika Provinsi Sumatera Utara</h1>
+        <p>Sistem Penyelarasan Buku Kas Umum (BKU) & Laporan SPJ Belanja</p>
+    </header>
+
+    <div class="grid-layout">
+        <!-- FORM INPUT TRANSAKSI BKU -->
+        <div class="card">
+            <div class="card-title">
+                Form Input Transaksi BKU
+                <span class="badge">Mei 2026</span>
+            </div>
+            
+            <form id="bkuForm">
+                <div class="form-group">
+                    <label for="tanggal">Tanggal Transaksi</label>
+                    <input type="date" id="tanggal" required value="2026-05-01">
+                </div>
+
+                <div class="form-group">
+                    <label for="noBukti">Nomor Bukti Pengeluaran Kas</label>
+                    <input type="text" id="noBukti" placeholder="Contoh: 636/DKI-KEU/V/2026" required>
+                </div>
+
+                <!-- PILIH KODE REKENING (Untuk memicu Auto-populate "yg lain-lain" dari SPJ) -->
+                <div class="form-group">
+                    <label for="kodeRekening">Kode Rekening (Sesuai SPJ Belanja)</label>
+                    <select id="kodeRekening" required>
+                        <option value="">-- Pilih Kode Rekening --</option>
+                        <option value="1.01.0001.5.1.02.01.01.00026">1.01.0001.5.1.02.01.01.00026 (Bahan Cetak)</option>
+                        <option value="1.01.0001.5.1.02.02.02.0001">1.01.0001.5.1.02.02.02.0001 (Honorarium Jasa Kantor)</option>
+                        <option value="1.01.0004.5.1.02.01.01.00026">1.01.0004.5.1.02.01.01.00026 (Bahan Cetak - Koordinasi DPA)</option>
+                        <option value="2.16.03.1.02.0030.5.1.02.02.001.00063">2.16.03.1.02.0030.5.1.02.02.001.00063 (Internet/Kawat/TV)</option>
+                    </select>
+                </div>
+
+                <!-- FIELD AUTO-POPULATE: URAIAN REKENING -->
+                <div class="form-group">
+                    <label for="uraian">Uraian / Deskripsi Rekening</label>
+                    <input type="text" id="uraian" class="readonly-field" readonly placeholder="Akan terisi otomatis setelah memilih kode rekening...">
+                </div>
+
+                <!-- FIELD AUTO-POPULATE: ANGGARAN TAHUN INI -->
+                <div class="form-group">
+                    <label for="anggaran">Anggaran Tahun Ini (Rp)</label>
+                    <input type="text" id="anggaran" class="readonly-field" readonly placeholder="Akan terisi otomatis...">
+                </div>
+
+                <div class="form-group">
+                    <label for="pengeluaran">Jumlah Pengeluaran Bulan Ini (Rp)</label>
+                    <input type="number" id="pengeluaran" placeholder="Masukkan jumlah pengeluaran, misal: 12000000" required>
+                </div>
+
+                <!-- INFO BUDGET SEMENTARA -->
+                <div id="budgetInfo" class="budget-info">
+                    Sisa Pagu Anggaran Rekening setelah pengeluaran ini: <strong id="sisaAnggaran">Rp -</strong>
+                </div>
+
+                <button type="submit" class="btn">Simpan Transaksi ke BKU</button>
+            </form>
+        </div>
+
+        <!-- PRATINJAU KAMUS SPJ BELANJA -->
+        <div class="card">
+            <div class="card-title">Referensi Kamus Kode Rekening (SPJ Belanja)</div>
+            <p style="font-size: 13px; color: #6b7280; margin-bottom: 15px;">
+                Tabel di bawah memuat data pagu dari dokumen <strong>SPJ Belanja</strong> yang disinkronkan secara otomatis ke dalam pilihan form.
+            </p>
+            <div class="table-container">
+                <table id="spjTable">
+                    <thead>
+                        <tr>
+                            <th>Kode Rekening</th>
+                            <th>Uraian Rekening</th>
+                            <th>Anggaran Tahun Ini</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Baris tabel diisi secara dinamis oleh javascript.js -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Menghubungkan ke file JavaScript eksternal -->
+<script src="javascript.js"></script>
+</body>
+</html>
