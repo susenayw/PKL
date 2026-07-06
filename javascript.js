@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function() {
 // Mengisi Tabel Referensi SPJ di sebelah kanan secara dinamis
 function renderSPJTable() {
     const tbody = document.querySelector("#spjTable tbody");
-    tbody.innerHTML = ""; // Bersihkan tabel
+    tbody.innerHTML = ""; // Bersihkan tabel sebelum dimuat ulang
     
     for (const [kode, data] of Object.entries(databaseSPJ)) {
         const row = document.createElement("tr");
@@ -56,24 +56,39 @@ function setupEventListeners() {
 
     // Format input angka secara real-time dan hitung anggaran
     inputPengeluaran.addEventListener("input", function(e) {
-        // Hapus semua karakter selain angka
         let rawValue = this.value.replace(/[^0-9]/g, '');
         
-        // Format kembali menjadi standar ribuan Indonesia (menggunakan titik)
         if (rawValue !== "") {
             this.value = new Intl.NumberFormat('id-ID').format(rawValue);
         } else {
             this.value = "";
         }
         
-        // Panggil fungsi kalkulasi setelah format selesai
         calculateRealtimeBudget();
     });
 
-    // Simulasi penyimpanan data saat disubmit
+    // PERUBAHAN UTAMA: Logika sinkronisasi langsung ke tabel tanpa alert window bawaan
     formBKU.addEventListener("submit", function(e) {
         e.preventDefault();
-        alert("Transaksi berhasil dicatat ke BKU lokal! Selisih pagu anggaran telah diperbarui secara otomatis.");
+        
+        const selectedKode = selectKode.value;
+        const cleanValue = inputPengeluaran.value.replace(/\./g, ''); 
+        const pengeluaranValue = parseFloat(cleanValue) || 0;
+
+        if (selectedKode && databaseSPJ[selectedKode]) {
+            // 1. Kurangi sisa anggaran langsung di database lokal
+            databaseSPJ[selectedKode].anggaran -= pengeluaranValue;
+            
+            // 2. Jalankan ulang fungsi render agar tabel referensi langsung terupdate di layar
+            renderSPJTable();
+            
+            // 3. Reset form input kembali kosong bersih
+            formBKU.reset();
+            document.getElementById("budgetInfo").style.display = "none";
+            
+            // 4. Panggil notifikasi sukses kustom yang halus (bukan pop-up alert HTML)
+            showSuccessToast();
+        }
     });
 }
 
@@ -85,13 +100,11 @@ function handleRekeningChange() {
     const budgetInfoDiv = document.getElementById("budgetInfo");
 
     if (selectedKode && databaseSPJ[selectedKode]) {
-        // Otomatis isi uraian dan anggaran tahun ini
         uraianField.value = databaseSPJ[selectedKode].uraian;
         anggaranField.value = formatRupiah(databaseSPJ[selectedKode].anggaran);
         budgetInfoDiv.style.display = "block"; // Tampilkan kotak sisa pagu
         calculateRealtimeBudget();
     } else {
-        // Reset jika tidak ada opsi yang dipilih
         uraianField.value = "";
         anggaranField.value = "";
         budgetInfoDiv.style.display = "none";
@@ -106,8 +119,6 @@ function calculateRealtimeBudget() {
 
     if (selectedKode && databaseSPJ[selectedKode]) {
         const totalAnggaran = databaseSPJ[selectedKode].anggaran;
-        
-        // Hapus titik sebelum mengubah string menjadi angka (Float) untuk dihitung
         const cleanValue = inputPengeluaran.value.replace(/\./g, ''); 
         const pengeluaranValue = parseFloat(cleanValue) || 0;
         
@@ -115,12 +126,45 @@ function calculateRealtimeBudget() {
 
         sisaSpan.textContent = formatRupiah(sisa);
         
-        // Peringatan visual jika pengeluaran melebihi anggaran tahun ini
         if (sisa < 0) {
-            sisaSpan.style.color = "#dc2626"; // Merah
+            sisaSpan.style.color = "#dc2626"; // Merah jika over-budget
             sisaSpan.textContent += " (Over-budget!)";
         } else {
             sisaSpan.style.color = "#115e59"; // Hijau stabil
         }
     }
+}
+
+// Fungsi tambahan untuk membuat Toast Notifikasi sukses yang bersih tanpa alert browser
+function showSuccessToast() {
+    let toast = document.getElementById("customToast");
+    
+    // Jika elemen toast belum ada di HTML, buat otomatis menggunakan Javascript
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "customToast";
+        toast.style.position = "fixed";
+        toast.style.bottom = "20px";
+        toast.style.right = "20px";
+        toast.style.backgroundColor = "#0d9488"; // Warna teal administrasi sesuai tema
+        toast.style.color = "white";
+        toast.style.padding = "14px 22px";
+        toast.style.borderRadius = "8px";
+        toast.style.boxShadow = "0 10px 15px -3px rgba(0, 0, 0, 0.1)";
+        toast.style.zIndex = "9999";
+        toast.style.fontSize = "13px";
+        toast.style.fontWeight = "600";
+        toast.style.transition = "opacity 0.3s ease";
+        document.body.appendChild(toast);
+    }
+    
+    toast.textContent = "✔ Transaksi berhasil disimpan. Kamus referensi anggaran diperbarui secara instan!";
+    toast.style.opacity = "1";
+    toast.style.display = "block";
+    
+    // Hilangkan notifikasi secara otomatis setelah 3.5 detik
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => { toast.style.display = "none"; }, 300);
+    }, 3500);
 }
