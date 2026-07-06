@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Integrasi BKU & SPJ Belanja - Diskominfo Sumut</title>
-    <!-- Menghubungkan ke file CSS eksternal -->
     <link rel="stylesheet" href="indexstyle.css">
 </head>
 <body>
@@ -16,7 +15,6 @@
     </header>
 
     <div class="grid-layout">
-        <!-- FORM INPUT TRANSAKSI BKU -->
         <div class="card">
             <div class="card-title">
                 Form Input Transaksi BKU
@@ -34,7 +32,6 @@
                     <input type="text" id="noBukti" placeholder="Contoh: 636/DKI-KEU/V/2026" required>
                 </div>
 
-                <!-- PILIH KODE REKENING (Untuk memicu Auto-populate "yg lain-lain" dari SPJ) -->
                 <div class="form-group">
                     <label for="kodeRekening">Kode Rekening (Sesuai SPJ Belanja)</label>
                     <select id="kodeRekening" required>
@@ -46,13 +43,11 @@
                     </select>
                 </div>
 
-                <!-- FIELD AUTO-POPULATE: URAIAN REKENING -->
                 <div class="form-group">
                     <label for="uraian">Uraian / Deskripsi Rekening</label>
                     <input type="text" id="uraian" class="readonly-field" readonly placeholder="Akan terisi otomatis setelah memilih kode rekening...">
                 </div>
 
-                <!-- FIELD AUTO-POPULATE: ANGGARAN TAHUN INI -->
                 <div class="form-group">
                     <label for="anggaran">Anggaran Tahun Ini (Rp)</label>
                     <input type="text" id="anggaran" class="readonly-field" readonly placeholder="Akan terisi otomatis...">
@@ -60,10 +55,9 @@
 
                 <div class="form-group">
                     <label for="pengeluaran">Jumlah Pengeluaran Bulan Ini (Rp)</label>
-                    <input type="text" id="pengeluaran" placeholder="Contoh: 10.000.000" required>                
+                    <input type="text" id="pengeluaran" placeholder="Contoh: 10.000.000" required>
                 </div>
 
-                <!-- INFO BUDGET SEMENTARA -->
                 <div id="budgetInfo" class="budget-info">
                     Sisa Pagu Anggaran Rekening setelah pengeluaran ini: <strong id="sisaAnggaran">Rp -</strong>
                 </div>
@@ -72,7 +66,6 @@
             </form>
         </div>
 
-        <!-- PRATINJAU KAMUS SPJ BELANJA -->
         <div class="card">
             <div class="card-title">Referensi Kamus Kode Rekening (SPJ Belanja)</div>
             <p style="font-size: 13px; color: #6b7280; margin-bottom: 15px;">
@@ -88,15 +81,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Baris tabel diisi secara dinamis oleh javascript.js -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
+            
+            <button id="btnDownloadExcel" class="btn" style="background-color: #1e3a8a; margin-top: 20px;">⬇ Download File Excel (BKU & SPJ)</button>
         </div>
     </div>
 </div>
 
-<!-- Menghubungkan ke file JavaScript eksternal -->
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="javascript.js"></script>
 </body>
 </html>
