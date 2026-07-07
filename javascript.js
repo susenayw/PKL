@@ -26,6 +26,17 @@ document.addEventListener("DOMContentLoaded", function() {
     setupEventListeners();
 });
 
+// LOGIKA FLEKSIBEL 1: Mengecek apakah suatu kode adalah "Kepala/Induk" (punya anak cabang)
+function isParent(kode) {
+    return hierarkiSPJ.some(item => item.kode !== kode && item.kode.startsWith(kode + "."));
+}
+
+// LOGIKA FLEKSIBEL 2: Menghitung kedalaman cabang (untuk indentasi tabel) tanpa batasan segmen
+function getDepth(kode) {
+    // Menghitung ada berapa banyak 'leluhur' (induk) yang dimiliki kode ini di database
+    return hierarkiSPJ.filter(item => item.kode !== kode && kode.startsWith(item.kode + ".")).length;
+}
+
 // Render Tabel SPJ Berjenjang di Layar Kanan
 function renderSPJTable(updatedKode = null) {
     const tbody = document.querySelector("#spjTable tbody");
@@ -37,16 +48,14 @@ function renderSPJTable(updatedKode = null) {
     }
 
     hierarkiSPJ.forEach(data => {
-        // UPGRADE LOGIC 1: Deteksi Kepala/Induk
-        const segments = data.kode.split('.').length;
-        // Dianggap Induk jika segmennya <= 3 (contoh: 2.16.01) ATAU jika dia punya anak cabang
-        const hasChildren = hierarkiSPJ.some(item => item.kode !== data.kode && item.kode.startsWith(data.kode + "."));
-        const isHeader = segments <= 3 || hasChildren;
+        const parentStatus = isParent(data.kode);
+        const depthLevel = getDepth(data.kode);
         
-        let styleStr = isHeader ? "font-weight: 700; color: #111827;" : "font-style: italic; color: #4b5563;";
+        // Jika dia adalah induk (punya anak), cetak tebal. Jika tidak, cetak miring.
+        let styleStr = parentStatus ? "font-weight: 700; color: #111827;" : "font-style: italic; color: #4b5563;";
         
-        // UPGRADE LOGIC 2: Hitung kedalaman cabang untuk Indentasi (Menjorok ke dalam)
-        let indentPx = Math.max(0, (segments - 3)) * 20; 
+        // Indentasi dinamis berdasarkan jumlah leluhurnya (20px per level)
+        let indentPx = depthLevel * 20; 
 
         const row = document.createElement("tr");
         row.innerHTML = `
@@ -128,12 +137,10 @@ function setupEventListeners() {
         const existingIndex = hierarkiSPJ.findIndex(i => i.kode === kode);
         
         if (existingIndex !== -1) {
-            // Jika sudah ada, cukup tambahkan alokasi dompetnya saja
             hierarkiSPJ[existingIndex].anggaranAwal += alokasi;
             hierarkiSPJ[existingIndex].anggaranSisa += alokasi;
             showToast(`✔ Dompet Rekening ${kode} berhasil ditambah.`);
         } else {
-            // Jika belum ada, daftarkan sebagai rekening baru
             hierarkiSPJ.push({
                 kode: kode,
                 uraian: uraian,
@@ -144,7 +151,7 @@ function setupEventListeners() {
             showToast(`✔ Rekening baru berhasil didaftarkan.`);
         }
 
-        // UPGRADE LOGIC 3: Smart Sorting (Mengurutkan otomatis 2.16.01, 2.16.01.1, 2.16.02, dst)
+        // Smart Sorting: Mengurutkan otomatis apapun format angkanya
         hierarkiSPJ.sort((a, b) => a.kode.localeCompare(b.kode, undefined, {numeric: true}));
 
         formRekening.reset();
@@ -196,9 +203,8 @@ function setupEventListeners() {
             saldo: saldoKasSaatIni
         });
 
-        // 2. Pemotongan Dana Berjenjang (Anak memotong Kepala)
+        // 2. Pemotongan Dana Berjenjang (Anak memotong Kepala secara presisi)
         hierarkiSPJ.forEach(item => {
-            // UPGRADE LOGIC 4: Wajib pakai titik agar 2.16.01 tidak salah potong ke 2.16.011
             if (kodeTarget === item.kode || kodeTarget.startsWith(item.kode + ".")) {
                 item.anggaranSisa -= pengeluaran;
                 item.pengeluaranTotal += pengeluaran;
@@ -207,7 +213,7 @@ function setupEventListeners() {
 
         formTransaksi.reset();
         document.getElementById("budgetInfo").style.display = "none";
-        renderSPJTable(kodeTarget); // Baris yang terpotong akan menyala merah pudar
+        renderSPJTable(kodeTarget); 
         showToast("✔ Transaksi sukses. Saldo rekening cabang dan kepala berhasil dipotong.");
     });
 
@@ -276,7 +282,7 @@ async function generateExcelBKU() {
 }
 
 // -------------------------------------------------------------
-// FUNGSI EXPORT EXCEL SPJ 
+// FUNGSI EXPORT EXCEL SPJ (Sinkron dengan Logika Fleksibel)
 // -------------------------------------------------------------
 async function generateExcelSPJ() {
     if (hierarkiSPJ.length === 0) {
@@ -334,9 +340,9 @@ async function generateExcelSPJ() {
     }
 
     hierarkiSPJ.forEach(data => {
-        const segments = data.kode.split('.').length;
-        const hasChildren = hierarkiSPJ.some(item => item.kode !== data.kode && item.kode.startsWith(data.kode + "."));
-        const isHeader = segments <= 3 || hasChildren;
+        // Implementasi logika kedalaman dinamis pada Excel
+        const parentStatus = isParent(data.kode);
+        const depthLevel = getDepth(data.kode);
 
         const row = ws.addRow([
             data.kode, data.uraian, data.anggaranAwal, 
@@ -348,12 +354,11 @@ async function generateExcelSPJ() {
         row.eachCell((cell, colNum) => {
             applyBorders(cell);
             
-            if (isHeader) cell.font = { bold: true };
+            if (parentStatus) cell.font = { bold: true };
             else cell.font = { italic: true };
 
             if (colNum === 2) {
-                let indentLvl = Math.max(0, segments - 3);
-                cell.alignment = { horizontal: 'left', wrapText: true, indent: indentLvl };
+                cell.alignment = { horizontal: 'left', wrapText: true, indent: depthLevel };
             } else {
                 cell.alignment = { horizontal: 'center', vertical: 'middle' };
             }
