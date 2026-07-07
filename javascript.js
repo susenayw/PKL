@@ -1,38 +1,13 @@
-// STRUKTUR DATA (Semua 0, Kecuali Kepala Rekening 23M)
-const hierarkiSPJ = [
-    { kode: "2.16.01", uraian: "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI", anggaranAwal: 23179870578, type: "header", isBold: true, dropdownLevel: 1, parentUI: null },
-    
-    { kode: "2.16.01.1.01", uraian: "Perencanaan, Penganggaran, dan Evaluasi Kinerja Perangkat Daerah", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: 2, parentUI: "2.16.01" },
-    { kode: "2.16.01.1.01.0001", uraian: "Penyusunan Dokumen Perencanaan Perangkat Daerah", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: null, parentUI: null },
-    { kode: "2.16.01.1.01.0001.5", uraian: "BELANJA DAERAH", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: null, parentUI: null },
-    { kode: "2.16.01.1.01.0001.5.1", uraian: "BELANJA OPERASI", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: null, parentUI: null },
-    { kode: "2.16.01.1.01.0001.5.1.02", uraian: "Belanja Barang dan Jasa", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: null, parentUI: null },
-    
-    // Rincian Cabang 1
-    { kode: "2.16.01.1.01.0001.5.1.02.01", uraian: "Belanja Barang", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: null, parentUI: null },
-    { kode: "2.16.01.1.01.0001.5.1.02.01.001", uraian: "Belanja Barang Pakai Habis", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: null, parentUI: null },
-    { kode: "2.16.01.1.01.0001.5.1.02.01.001.00026", uraian: "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Cetak", anggaranAwal: 0, type: "leaf", isItalic: true, dropdownLevel: 3, parentUI: "2.16.01.1.01" },
-    
-    // Rincian Cabang 2
-    { kode: "2.16.01.1.01.0001.5.1.02.02", uraian: "Belanja Jasa", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: null, parentUI: null },
-    { kode: "2.16.01.1.01.0001.5.1.02.02.001", uraian: "Belanja Jasa Kantor", anggaranAwal: 0, type: "header", isBold: true, dropdownLevel: null, parentUI: null },
-    { kode: "2.16.01.1.01.0001.5.1.02.02.001.00003", uraian: "Honorarium Narasumber atau Pembahas, Moderator, Pembawa Acara, dan Panitia", anggaranAwal: 0, type: "leaf", isItalic: true, dropdownLevel: 3, parentUI: "2.16.01.1.01" }
-];
-
-// Setup data sisa anggaran default
-hierarkiSPJ.forEach(item => {
-    item.anggaranSisa = item.anggaranAwal;
-    item.pengeluaranTotal = 0;
-});
-
+// DATABASE KOSONG DI AWAL (Kanvas Bersih)
+let hierarkiSPJ = [];
 let riwayatBKU = [];
-let saldoKasSaatIni = 805562377; 
-let targetLeafKode = null; 
+let saldoKasSaatIni = 805562377; // Asumsi saldo awal pembukuan Kas Umum
 
 function formatRupiah(angka) {
     return "Rp " + new Intl.NumberFormat('id-ID').format(angka);
 }
 
+// Format penamaan file bulan dinamis
 function getNamaBulanTahun(dateString) {
     if(!dateString) return "Bulan_Ini";
     const date = new Date(dateString);
@@ -48,105 +23,86 @@ function getNamaBulanHeader(dateString) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    renderSPJTable();
-    initDropdowns();
     setupEventListeners();
 });
 
+// Render Tabel SPJ Berjenjang di Layar Kanan
 function renderSPJTable(updatedKode = null) {
     const tbody = document.querySelector("#spjTable tbody");
     tbody.innerHTML = ""; 
     
+    if (hierarkiSPJ.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #9ca3af; font-style: italic;">Database kosong. Silakan buat rekening baru.</td></tr>`;
+        return;
+    }
+
     hierarkiSPJ.forEach(data => {
-        const row = document.createElement("tr");
+        // UPGRADE LOGIC 1: Deteksi Kepala/Induk
+        const segments = data.kode.split('.').length;
+        // Dianggap Induk jika segmennya <= 3 (contoh: 2.16.01) ATAU jika dia punya anak cabang
+        const hasChildren = hierarkiSPJ.some(item => item.kode !== data.kode && item.kode.startsWith(data.kode + "."));
+        const isHeader = segments <= 3 || hasChildren;
         
-        let styleStr = data.isBold ? "font-weight: 700;" : "";
-        styleStr += data.type === 'leaf' ? "font-style: italic; color: #4b5563;" : "";
+        let styleStr = isHeader ? "font-weight: 700; color: #111827;" : "font-style: italic; color: #4b5563;";
+        
+        // UPGRADE LOGIC 2: Hitung kedalaman cabang untuk Indentasi (Menjorok ke dalam)
+        let indentPx = Math.max(0, (segments - 3)) * 20; 
 
-        let indentPx = (data.kode.split('.').length - 3) * 12; 
-        if (indentPx < 0) indentPx = 0;
-
+        const row = document.createElement("tr");
         row.innerHTML = `
             <td style="${styleStr}">${data.kode}</td>
             <td style="${styleStr} padding-left: ${indentPx}px;">${data.uraian}</td>
             <td style="${styleStr}">${formatRupiah(data.anggaranSisa)}</td>
         `;
 
-        if (updatedKode && updatedKode.startsWith(data.kode)) {
+        // Highlight merah pudar jika baris ini dipotong anggarannya
+        if (updatedKode && (updatedKode === data.kode || updatedKode.startsWith(data.kode + "."))) {
+            row.style.backgroundColor = "#fecdd3"; 
+            row.style.transition = "background-color 2.5s ease"; 
+            setTimeout(() => { row.style.backgroundColor = ""; }, 2500);
+        }
+        
+        // Highlight hijau pudar jika baris ini baru di-alokasi uangnya
+        if (updatedKode === "ADD_" + data.kode) {
             row.style.backgroundColor = "#ccfbf1"; 
             row.style.transition = "background-color 2.5s ease"; 
             setTimeout(() => { row.style.backgroundColor = ""; }, 2500);
         }
+
         tbody.appendChild(row);
     });
 }
 
-function initDropdowns() {
-    const area = document.getElementById('dropdownArea');
-    area.innerHTML = `
-        <div class="form-group" id="group-level1">
-            <label>1. Pilih Program Utama (Induk)</label>
-            <select id="level1" class="dynamic-select" data-level="1" required>
-                <option value="">-- Pilih Program Kepala --</option>
-                ${hierarkiSPJ.filter(i => i.dropdownLevel === 1).map(i => `<option value="${i.kode}">${i.kode} - ${i.uraian}</option>`).join('')}
-            </select>
-        </div>
-    `;
+// Render Dropdown untuk Form Transaksi
+function updateDropdownTransaksi() {
+    const select = document.getElementById("pilihRekening");
+    select.innerHTML = '<option value="">-- Pilih Rekening --</option>';
+    
+    if (hierarkiSPJ.length === 0) {
+        select.innerHTML = '<option value="">-- Kamus Kosong, Buat Rekening Dahulu --</option>';
+        return;
+    }
+
+    hierarkiSPJ.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.kode;
+        option.textContent = `${item.kode} - ${item.uraian.substring(0, 50)}${item.uraian.length > 50 ? '...' : ''}`;
+        select.appendChild(option);
+    });
 }
 
 function setupEventListeners() {
-    const dropdownArea = document.getElementById('dropdownArea');
-    const inputAlokasi = document.getElementById("alokasi");
+    const formRekening = document.getElementById("formRekening");
+    const formTransaksi = document.getElementById("formTransaksi");
+    
+    const inputAlokasi = document.getElementById("newAlokasi");
     const inputPengeluaran = document.getElementById("pengeluaran");
-    const formBKU = document.getElementById("bkuForm");
+    const pilihRekening = document.getElementById("pilihRekening");
     
     const btnDownloadBKU = document.getElementById("btnDownloadBKU");
     const btnDownloadSPJ = document.getElementById("btnDownloadSPJ");
 
-    dropdownArea.addEventListener('change', function(e) {
-        if(e.target.classList.contains('dynamic-select')) {
-            const currentLevel = parseInt(e.target.dataset.level);
-            const selectedKode = e.target.value;
-
-            const allGroups = document.querySelectorAll('#dropdownArea .form-group');
-            allGroups.forEach(group => {
-                const select = group.querySelector('select');
-                if(select && parseInt(select.dataset.level) > currentLevel) {
-                    group.remove();
-                }
-            });
-
-            targetLeafKode = null; 
-            resetUIInfo();
-
-            if(selectedKode) {
-                const children = hierarkiSPJ.filter(item => item.parentUI === selectedKode);
-                
-                if(children.length > 0) {
-                    const nextLevel = currentLevel + 1;
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'form-group';
-                    wrapper.id = `group-level${nextLevel}`;
-                    
-                    let labelText = nextLevel === 2 ? "2. Pilih Kegiatan (Cabang)" : "3. Pilih Rincian Belanja (Pecahan Terdalam)";
-                    
-                    wrapper.innerHTML = `
-                        <label>${labelText}</label>
-                        <select id="level${nextLevel}" class="dynamic-select" data-level="${nextLevel}" required>
-                            <option value="">-- Pilih Bagian --</option>
-                            ${children.map(c => `<option value="${c.kode}">${c.kode} - ${c.uraian.substring(0,60)}...</option>`).join('')}
-                        </select>
-                    `;
-                    dropdownArea.appendChild(wrapper);
-                } else {
-                    targetLeafKode = selectedKode;
-                    calculateRealtimeBudget(); 
-                }
-            }
-        }
-    });
-
-    // Format input angka otomatis
+    // Format Input Angka Otomatis saat diketik
     [inputAlokasi, inputPengeluaran].forEach(input => {
         input.addEventListener("input", function(e) {
             let rawValue = this.value.replace(/[^0-9]/g, '');
@@ -155,128 +111,117 @@ function setupEventListeners() {
             } else {
                 this.value = "";
             }
-            calculateRealtimeBudget();
         });
     });
 
-    // LOGIKA PENYIMPANAN ALOKASI & PENGELUARAN
-    formBKU.addEventListener("submit", function(e) {
+    // ==========================================
+    // AKSI 1: TAMBAH KODE REKENING / ALOKASI BARU
+    // ==========================================
+    formRekening.addEventListener("submit", function(e) {
         e.preventDefault();
         
-        if (!targetLeafKode) {
-            alert("Harap pilih hingga ke Rincian Belanja terdalam (Level 3)!");
-            return;
+        const kode = document.getElementById("newKode").value.trim();
+        const uraian = document.getElementById("newUraian").value.trim();
+        const alokasi = parseFloat(inputAlokasi.value.replace(/\./g, '')) || 0;
+
+        // Cek apakah rekening sudah ada di database
+        const existingIndex = hierarkiSPJ.findIndex(i => i.kode === kode);
+        
+        if (existingIndex !== -1) {
+            // Jika sudah ada, cukup tambahkan alokasi dompetnya saja
+            hierarkiSPJ[existingIndex].anggaranAwal += alokasi;
+            hierarkiSPJ[existingIndex].anggaranSisa += alokasi;
+            showToast(`✔ Dompet Rekening ${kode} berhasil ditambah.`);
+        } else {
+            // Jika belum ada, daftarkan sebagai rekening baru
+            hierarkiSPJ.push({
+                kode: kode,
+                uraian: uraian,
+                anggaranAwal: alokasi,
+                anggaranSisa: alokasi,
+                pengeluaranTotal: 0
+            });
+            showToast(`✔ Rekening baru berhasil didaftarkan.`);
         }
 
+        // UPGRADE LOGIC 3: Smart Sorting (Mengurutkan otomatis 2.16.01, 2.16.01.1, 2.16.02, dst)
+        hierarkiSPJ.sort((a, b) => a.kode.localeCompare(b.kode, undefined, {numeric: true}));
+
+        formRekening.reset();
+        renderSPJTable("ADD_" + kode);
+        updateDropdownTransaksi();
+    });
+
+    // ==========================================
+    // AKSI 2: PENGELUARAN (POTONG DOMPET BERJENJANG)
+    // ==========================================
+    pilihRekening.addEventListener("change", function() {
+        const item = hierarkiSPJ.find(i => i.kode === this.value);
+        const info = document.getElementById("budgetInfo");
+        if(item) {
+            info.innerHTML = `Sisa Anggaran Saat Ini: <strong style="color:#115e59;">${formatRupiah(item.anggaranSisa)}</strong>`;
+            info.style.display = "block";
+        } else {
+            info.style.display = "none";
+        }
+    });
+
+    formTransaksi.addEventListener("submit", function(e) {
+        e.preventDefault();
+        
         const tanggal = document.getElementById("tanggal").value;
         const noBukti = document.getElementById("noBukti").value;
-        
-        const alokasiValue = parseFloat(inputAlokasi.value.replace(/\./g, '')) || 0;
-        const pengeluaranValue = parseFloat(inputPengeluaran.value.replace(/\./g, '')) || 0;
+        const kodeTarget = pilihRekening.value;
+        const pengeluaran = parseFloat(inputPengeluaran.value.replace(/\./g, '')) || 0;
 
-        if (alokasiValue === 0 && pengeluaranValue === 0) {
-            alert("Harap isi Alokasi Anggaran ATAU Jumlah Pengeluaran untuk melanjutkan.");
-            return;
+        if(!kodeTarget) {
+            alert("Pilih rekening tujuan pengeluaran!"); return;
+        }
+        if(pengeluaran <= 0) {
+            alert("Jumlah pengeluaran tidak valid!"); return;
         }
 
-        const leafItem = hierarkiSPJ.find(i => i.kode === targetLeafKode);
+        const itemTarget = hierarkiSPJ.find(i => i.kode === kodeTarget);
 
-        // Jika ada pengeluaran, pastikan noBukti diisi dan catat di BKU
-        if (pengeluaranValue > 0) {
-            if (!noBukti) {
-                alert("Nomor Bukti wajib diisi jika Anda melakukan pengeluaran!");
-                return;
-            }
-            saldoKasSaatIni -= pengeluaranValue;
-            riwayatBKU.push({
-                noUrut: riwayatBKU.length + 1,
-                tanggal: tanggal,
-                noBukti: noBukti,
-                uraian: leafItem.uraian,
-                kodeRekening: targetLeafKode,
-                penerimaan: 0,
-                pengeluaran: pengeluaranValue,
-                saldo: saldoKasSaatIni
-            });
-        }
+        // 1. Catat ke Riwayat Kas BKU
+        saldoKasSaatIni -= pengeluaran;
+        riwayatBKU.push({
+            noUrut: riwayatBKU.length + 1,
+            tanggal: tanggal,
+            noBukti: noBukti,
+            uraian: itemTarget.uraian,
+            kodeRekening: kodeTarget,
+            penerimaan: 0,
+            pengeluaran: pengeluaran,
+            saldo: saldoKasSaatIni
+        });
 
-        // PEMBARUAN ANGGARAN SPJ BERJENJANG (Alokasi & Pemotongan)
+        // 2. Pemotongan Dana Berjenjang (Anak memotong Kepala)
         hierarkiSPJ.forEach(item => {
-            if (targetLeafKode.startsWith(item.kode)) {
-                
-                // 1. Logika Alokasi: Tambah anggaran ke anak cabang (kecuali Kepala Rekening agar tetap 23M)
-                if (item.dropdownLevel !== 1 && alokasiValue > 0) {
-                    item.anggaranAwal += alokasiValue;
-                    item.anggaranSisa += alokasiValue;
-                }
-                
-                // 2. Logika Pengeluaran: Potong saldo dari anak hingga Kepala Rekening
-                if (pengeluaranValue > 0) {
-                    item.anggaranSisa -= pengeluaranValue;
-                    item.pengeluaranTotal += pengeluaranValue;
-                }
+            // UPGRADE LOGIC 4: Wajib pakai titik agar 2.16.01 tidak salah potong ke 2.16.011
+            if (kodeTarget === item.kode || kodeTarget.startsWith(item.kode + ".")) {
+                item.anggaranSisa -= pengeluaran;
+                item.pengeluaranTotal += pengeluaran;
             }
         });
-        
-        renderSPJTable(targetLeafKode);
-        
-        // Reset formulir kembali bersih
-        formBKU.reset();
-        initDropdowns();
-        resetUIInfo();
-        targetLeafKode = null;
-        
-        showSuccessToast();
+
+        formTransaksi.reset();
+        document.getElementById("budgetInfo").style.display = "none";
+        renderSPJTable(kodeTarget); // Baris yang terpotong akan menyala merah pudar
+        showToast("✔ Transaksi sukses. Saldo rekening cabang dan kepala berhasil dipotong.");
     });
 
     btnDownloadBKU.addEventListener("click", generateExcelBKU);
     btnDownloadSPJ.addEventListener("click", generateExcelSPJ);
 }
 
-function resetUIInfo() {
-    document.getElementById('uraian').value = "";
-    document.getElementById('budgetInfo').style.display = "none";
-}
-
-// SIMULASI VISUAL REAL-TIME MATEMATIKA ALOKASI & PENGELUARAN
-function calculateRealtimeBudget() {
-    if (!targetLeafKode) return;
-
-    const inputAlokasi = document.getElementById("alokasi");
-    const inputPengeluaran = document.getElementById("pengeluaran");
-    
-    const alokasiVal = parseFloat(inputAlokasi.value.replace(/\./g, '')) || 0;
-    const pengeluaranVal = parseFloat(inputPengeluaran.value.replace(/\./g, '')) || 0;
-
-    const leaf = hierarkiSPJ.find(i => i.kode === targetLeafKode);
-    const kegiatan = hierarkiSPJ.find(i => i.kode === leaf.parentUI);
-    const program = hierarkiSPJ.find(i => i.kode === kegiatan.parentUI);
-
-    document.getElementById('uraian').value = leaf.uraian;
-
-    // Kalkulasi simulasi sisa
-    const leafSisa = leaf.anggaranSisa + alokasiVal - pengeluaranVal;
-    const kegiatanSisa = kegiatan.anggaranSisa + alokasiVal - pengeluaranVal;
-    const programSisa = program.anggaranSisa - pengeluaranVal; // Program Utama (Kepala) tidak bertambah pagunya, hanya berkurang saat pengeluaran
-
-    const info = document.getElementById('budgetInfo');
-    info.innerHTML = `
-        <div style="font-size: 13px; margin-bottom: 8px;"><strong>Simulasi Saldo Saat Ini:</strong></div>
-        <ul style="margin-left: 20px; font-size: 13px; color: #374151;">
-            <li>Kepala (${program.kode}): <strong style="color:#1e3a8a;">${formatRupiah(programSisa)}</strong></li>
-            <li>Kegiatan (${kegiatan.kode}): <strong>${formatRupiah(kegiatanSisa)}</strong></li>
-            <li>Rincian Terpilih (${leaf.kode}): <strong style="color:${leafSisa < 0 ? '#dc2626' : '#115e59'};">${formatRupiah(leafSisa)}</strong></li>
-        </ul>
-    `;
-    info.style.display = 'block';
-}
-
+// Helper Garis Tabel ExcelJS
 function applyBorders(cell) {
     cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 }
 
 // -------------------------------------------------------------
-// FUNGSI EXPORT EXCEL BKU - DINAMIS BULANAN
+// FUNGSI EXPORT EXCEL BKU
 // -------------------------------------------------------------
 async function generateExcelBKU() {
     if (riwayatBKU.length === 0) {
@@ -284,7 +229,7 @@ async function generateExcelBKU() {
         return;
     }
 
-    const tanggalInput = document.getElementById("tanggal").value;
+    const tanggalInput = document.getElementById("tanggal") ? document.getElementById("tanggal").value : new Date();
     const bulanStr = getNamaBulanTahun(tanggalInput);
     const bulanHeader = getNamaBulanHeader(tanggalInput);
 
@@ -331,9 +276,14 @@ async function generateExcelBKU() {
 }
 
 // -------------------------------------------------------------
-// FUNGSI EXPORT EXCEL SPJ - TAHUNAN & BERCABANG (Sesuai Gambar 100%)
+// FUNGSI EXPORT EXCEL SPJ 
 // -------------------------------------------------------------
 async function generateExcelSPJ() {
+    if (hierarkiSPJ.length === 0) {
+        alert("Database kosong. Tidak ada SPJ yang bisa diekspor.");
+        return;
+    }
+
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet('SPJ Belanja Fungsional');
 
@@ -384,6 +334,10 @@ async function generateExcelSPJ() {
     }
 
     hierarkiSPJ.forEach(data => {
+        const segments = data.kode.split('.').length;
+        const hasChildren = hierarkiSPJ.some(item => item.kode !== data.kode && item.kode.startsWith(data.kode + "."));
+        const isHeader = segments <= 3 || hasChildren;
+
         const row = ws.addRow([
             data.kode, data.uraian, data.anggaranAwal, 
             0, 0, 0, 0, 0, 0, 
@@ -394,12 +348,11 @@ async function generateExcelSPJ() {
         row.eachCell((cell, colNum) => {
             applyBorders(cell);
             
-            if (data.isBold) cell.font = { bold: true };
-            if (data.type === 'leaf') cell.font = { italic: true };
+            if (isHeader) cell.font = { bold: true };
+            else cell.font = { italic: true };
 
             if (colNum === 2) {
-                let indentLvl = (data.kode.split('.').length - 3);
-                if (indentLvl < 0) indentLvl = 0;
+                let indentLvl = Math.max(0, segments - 3);
                 cell.alignment = { horizontal: 'left', wrapText: true, indent: indentLvl };
             } else {
                 cell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -414,7 +367,7 @@ async function generateExcelSPJ() {
     saveAs(blob, "SPJ_Belanja_Sumut_Tahunan_2026.xlsx");
 }
 
-function showSuccessToast() {
+function showToast(message) {
     let toast = document.getElementById("customToast");
     if (!toast) {
         toast = document.createElement("div");
@@ -422,7 +375,7 @@ function showSuccessToast() {
         toast.style.position = "fixed";
         toast.style.bottom = "20px";
         toast.style.right = "20px";
-        toast.style.backgroundColor = "#0d9488"; 
+        toast.style.backgroundColor = "#111827"; 
         toast.style.color = "white";
         toast.style.padding = "14px 22px";
         toast.style.borderRadius = "8px";
@@ -433,11 +386,11 @@ function showSuccessToast() {
         toast.style.transition = "opacity 0.3s ease";
         document.body.appendChild(toast);
     }
-    toast.textContent = "✔ Aksi berhasil disimpan ke Database SPJ & BKU!";
+    toast.textContent = message;
     toast.style.opacity = "1";
     toast.style.display = "block";
     setTimeout(() => {
         toast.style.opacity = "0";
         setTimeout(() => { toast.style.display = "none"; }, 300);
-    }, 4000);
+    }, 3500);
 }
