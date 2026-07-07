@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistem Integrasi BKU & SPJ Belanja</title>
+    <style>
+        :root {
+            --primary-blue: #1e3a8a;
+            --accent-gold: #dfa526;
+            --text-dark: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-image: url('background.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(15, 32, 67, 0.8), rgba(30, 58, 138, 0.6));
+            z-index: 1;
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.93);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            width: 100%;
+            max-width: 420px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border-top: 6px solid var(--accent-gold);
+        }
+
+        .login-header {
+            background-color: rgba(30, 58, 138, 0.95);
+            color: white;
+            padding: 30px 25px 25px 25px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .login-header h2 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .login-header p {
+            font-size: 13px;
+            opacity: 0.85;
+            line-height: 1.4;
+        }
+
+        .login-form {
+            padding: 30px 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-dark);
+            background-color: #ffffff;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.15);
+        }
+
+        .btn-login {
+            background: linear-gradient(135deg, var(--primary-blue), #1d4ed8);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-login:hover {
+            background: linear-gradient(135deg, #1e40af, #172554);
+            transform: translateY(-1px);
+        }
+
+        .error-message {
+            background-color: #fef2f2;
+            border-left: 4px solid #ef4444;
+            color: #b91c1c;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            display: none;
+            font-weight: 500;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-overlay"></div>
+
+    <div class="login-container">
+        <div class="login-header">
+            <h2>DISKOMINFO SUMUT</h2>
+            <p>Sistem Integrasi BKU & SPJ Belanja</p>
+        </div>
+        
+        <div class="login-form">
+            <div id="errorMessage" class="error-message">
+                Username atau Password salah!
+            </div>
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Masukkan username" autocomplete="off">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Masukkan password">
+            </div>
+
+            <button type="button" id="btnProsesLogin" class="btn-login">Masuk ke Sistem</button>
+        </div>
+    </div>
+
+    <script>
+        // Memicu fungsi login saat tombol diklik
+        document.getElementById('btnProsesLogin').addEventListener('click', jalankanVerifikasi);
+
+        // Memicu fungsi login jika user menekan tombol 'Enter' saat mengetik password
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') jalankanVerifikasi();
+        });
+
+        function jalankanVerifikasi() {
+            const userVal = document.getElementById('username').value.trim();
+            const passVal = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('errorMessage');
+
+            // Kredensial Dummy
+            if (userVal === 'admin' && passVal === 'password123') {
+                errorMsg.style.display = 'none';
+                
+                // Gunakan assign secara langsung ke file utama Anda
+                window.location.assign('index.html');
+            } else {
+                errorMsg.style.display = 'block';
+                
+                // Efek getar kotak login jika salah kredensial
+                const loginBox = document.querySelector('.login-container');
+                loginBox.style.animation = 'none';
+                void loginBox.offsetWidth; 
+                loginBox.style.animation = 'shake 0.3s ease-in-out';
+            }
+        }
+    </script>
+
+</body>
+</html>
