@@ -1,4 +1,3 @@
-// Database SPJ (Menyimpan Pagu Awal, Sisa, & Total Pengeluaran)
 const databaseSPJ = {
     "1.01.0001.5.1.02.01.01.00026": {
         uraian: "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Cetak",
@@ -26,22 +25,18 @@ const databaseSPJ = {
     }
 };
 
-// Array untuk menyimpan riwayat transaksi BKU
 let riwayatBKU = [];
-let saldoKasSaatIni = 805562377; // Saldo awal simulasi berdasarkan gambar fisik BKU
+let saldoKasSaatIni = 805562377; // Berdasarkan saldo awal BKU
 
-// Fungsi format rupiah 
 function formatRupiah(angka) {
     return "Rp " + new Intl.NumberFormat('id-ID').format(angka);
 }
 
-// Inisialisasi tampilan data
 document.addEventListener("DOMContentLoaded", function() {
     renderSPJTable();
     setupEventListeners();
 });
 
-// Render tabel dengan efek highlight jika ada update
 function renderSPJTable(updatedKode = null) {
     const tbody = document.querySelector("#spjTable tbody");
     tbody.innerHTML = ""; 
@@ -54,7 +49,6 @@ function renderSPJTable(updatedKode = null) {
             <td>${formatRupiah(data.anggaranSisa)}</td>
         `;
 
-        // Highlight baris yang baru saja di-update
         if (kode === updatedKode) {
             row.style.backgroundColor = "#ccfbf1"; 
             row.style.transition = "background-color 2.5s ease"; 
@@ -64,17 +58,16 @@ function renderSPJTable(updatedKode = null) {
     }
 }
 
-// Memasang Event Listener
 function setupEventListeners() {
     const selectKode = document.getElementById("kodeRekening");
     const inputPengeluaran = document.getElementById("pengeluaran");
     const formBKU = document.getElementById("bkuForm");
-    const btnDownload = document.getElementById("btnDownloadExcel");
+    
+    const btnDownloadBKU = document.getElementById("btnDownloadBKU");
+    const btnDownloadSPJ = document.getElementById("btnDownloadSPJ");
 
-    // Ganti kode rekening -> auto-populate
     selectKode.addEventListener("change", handleRekeningChange);
 
-    // Format input angka secara real-time
     inputPengeluaran.addEventListener("input", function(e) {
         let rawValue = this.value.replace(/[^0-9]/g, '');
         if (rawValue !== "") {
@@ -85,7 +78,6 @@ function setupEventListeners() {
         calculateRealtimeBudget();
     });
 
-    // Proses Submit (Simpan transaksi)
     formBKU.addEventListener("submit", function(e) {
         e.preventDefault();
         
@@ -93,12 +85,10 @@ function setupEventListeners() {
         const noBukti = document.getElementById("noBukti").value;
         const selectedKode = selectKode.value;
         
-        // Hapus titik sebelum konversi ke angka Float
         const cleanValue = inputPengeluaran.value.replace(/\./g, ''); 
         const pengeluaranValue = parseFloat(cleanValue) || 0;
 
         if (selectedKode && databaseSPJ[selectedKode]) {
-            // 1. Simpan ke Riwayat BKU
             saldoKasSaatIni -= pengeluaranValue;
             riwayatBKU.push({
                 noUrut: riwayatBKU.length + 1,
@@ -111,11 +101,9 @@ function setupEventListeners() {
                 saldo: saldoKasSaatIni
             });
 
-            // 2. Update Database SPJ lokal
             databaseSPJ[selectedKode].anggaranSisa -= pengeluaranValue;
             databaseSPJ[selectedKode].pengeluaranTotal += pengeluaranValue;
             
-            // 3. Render Ulang & Reset UI
             renderSPJTable(selectedKode);
             formBKU.reset();
             document.getElementById("budgetInfo").style.display = "none";
@@ -123,11 +111,10 @@ function setupEventListeners() {
         }
     });
 
-    // Event Listener untuk Download Excel
-    btnDownload.addEventListener("click", generateExcel);
+    btnDownloadBKU.addEventListener("click", generateExcelBKU);
+    btnDownloadSPJ.addEventListener("click", generateExcelSPJ);
 }
 
-// Logika Auto-populate
 function handleRekeningChange() {
     const selectedKode = document.getElementById("kodeRekening").value;
     const uraianField = document.getElementById("uraian");
@@ -146,7 +133,6 @@ function handleRekeningChange() {
     }
 }
 
-// Kalkulasi real-time saat mengetik nominal pengeluaran
 function calculateRealtimeBudget() {
     const selectedKode = document.getElementById("kodeRekening").value;
     const inputPengeluaran = document.getElementById("pengeluaran");
@@ -169,62 +155,161 @@ function calculateRealtimeBudget() {
     }
 }
 
-// Fungsi Ekspor ke Excel menggunakan SheetJS
-function generateExcel() {
+// Helper untuk styling border ExcelJS
+function applyBorders(cell) {
+    cell.border = {
+        top: { style: 'thin' }, left: { style: 'thin' },
+        bottom: { style: 'thin' }, right: { style: 'thin' }
+    };
+}
+
+// -------------------------------------------------------------
+// FUNGSI EXPORT BKU Sesuai Format Fisik
+// -------------------------------------------------------------
+async function generateExcelBKU() {
     if (riwayatBKU.length === 0) {
-        alert("Belum ada transaksi BKU yang diinput. Silakan input data terlebih dahulu.");
+        alert("Belum ada transaksi BKU yang diinput.");
         return;
     }
 
-    // 1. Format Data untuk Sheet BKU
-    const dataBkuExcel = [
-        ["NO URUT", "TANGGAL", "NOMOR BUKTI PENGELUARAN KAS", "URAIAN", "KODE REKENING", "PENERIMAAN", "PENGELUARAN", "SALDO"] 
+    const workbook = new ExcelJS.Workbook();
+    const ws = workbook.addWorksheet('BKU Mei 2026');
+
+    ws.columns = [
+        { width: 8 }, { width: 15 }, { width: 35 }, { width: 45 }, 
+        { width: 25 }, { width: 20 }, { width: 20 }, { width: 20 }
     ];
+
+    // Header BKU
+    ws.mergeCells('A1:H1'); ws.getCell('A1').value = 'BUKU KAS UMUM';
+    ws.mergeCells('A2:H2'); ws.getCell('A2').value = 'DINAS KOMUNIKASI DAN INFORMATIKA PROVINSI SUMATERA UTARA';
+    ws.mergeCells('A3:H3'); ws.getCell('A3').value = 'TAHUN ANGGARAN 2026';
+    ws.mergeCells('A4:H4'); ws.getCell('A4').value = 'MEI';
     
-    riwayatBKU.forEach(item => {
-        dataBkuExcel.push([
-            item.noUrut,
-            item.tanggal,
-            item.noBukti,
-            item.uraian,
-            item.kodeRekening,
-            item.penerimaan,
-            item.pengeluaran,
-            item.saldo
-        ]);
+    ['A1', 'A2', 'A3', 'A4'].forEach(cell => {
+        ws.getCell(cell).alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getCell(cell).font = { bold: true, size: 12 };
     });
 
-    // 2. Format Data untuk Sheet SPJ Belanja
-    const dataSpjExcel = [
-        ["KODE REKENING", "URAIAN", "ANGGARAN TAHUN INI", "JUMLAH SPJ (PENGELUARAN)", "SISA PAGU ANGGARAN"] 
-    ];
-
-    for (const [kode, data] of Object.entries(databaseSPJ)) {
-        dataSpjExcel.push([
-            kode,
-            data.uraian,
-            data.anggaranAwal,
-            data.pengeluaranTotal,
-            data.anggaranSisa
-        ]);
-    }
-
-    // 3. Konversi array ke format SheetJS
-    const wsBKU = XLSX.utils.aoa_to_sheet(dataBkuExcel);
-    const wsSPJ = XLSX.utils.aoa_to_sheet(dataSpjExcel);
-
-    // Membuat file Excel virtual (Workbook)
-    const wb = XLSX.utils.book_new();
+    // Tabel Kolom BKU
+    const headerTitle = ws.addRow(['NO URUT', 'TANGGAL', 'NOMOR BUKTI PENGELUARAN KAS', 'URAIAN', 'KODE REKENING', 'PENERIMAAN', 'PENGELUARAN', 'SALDO']);
+    const headerNum = ws.addRow(['1', '2', '3', '4', '5', '6', '7', '8']);
     
-    // Menambahkan sheet ke dalam workbook
-    XLSX.utils.book_append_sheet(wb, wsBKU, "Buku Kas Umum (BKU)");
-    XLSX.utils.book_append_sheet(wb, wsSPJ, "SPJ Belanja");
+    [headerTitle, headerNum].forEach(row => {
+        row.eachCell((cell) => {
+            cell.font = { bold: true };
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            applyBorders(cell);
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+        });
+    });
 
-    // 4. Unduh File Excel
-    XLSX.writeFile(wb, "Laporan_BKU_SPJ_Sumut.xlsx");
+    // Isi Data BKU
+    riwayatBKU.forEach(item => {
+        const row = ws.addRow([item.noUrut, item.tanggal, item.noBukti, item.uraian, item.kodeRekening, item.penerimaan, item.pengeluaran, item.saldo]);
+        row.eachCell((cell, colNum) => {
+            applyBorders(cell);
+            if (colNum === 4) cell.alignment = { horizontal: 'left', wrapText: true };
+            else cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            if (colNum >= 6) cell.numFmt = '#,##0.00';
+        });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, "BKU_Sumut_Mei_2026.xlsx");
 }
 
-// Toast Notifikasi (menggantikan pop-up alert bawaan browser)
+// -------------------------------------------------------------
+// FUNGSI EXPORT SPJ Sesuai Format Fisik (14 Kolom)
+// -------------------------------------------------------------
+async function generateExcelSPJ() {
+    const workbook = new ExcelJS.Workbook();
+    const ws = workbook.addWorksheet('SPJ Belanja Fungsional');
+
+    // Setup 14 Kolom sesuai gambar fisik
+    ws.columns = [
+        { width: 25 }, { width: 35 }, { width: 20 }, // A, B, C
+        { width: 15 }, { width: 15 }, { width: 15 }, // D, E, F (LS GAJI)
+        { width: 15 }, { width: 15 }, { width: 15 }, // G, H, I (LS BARANG)
+        { width: 15 }, { width: 15 }, { width: 15 }, // J, K, L (UP/GU/TU)
+        { width: 20 }, { width: 20 }                 // M (Jumlah), N (Sisa Pagu)
+    ];
+
+    // Judul Utama SPJ
+    ws.mergeCells('A1:N1'); ws.getCell('A1').value = 'PROVINSI SUMATERA UTARA';
+    ws.mergeCells('A2:N2'); ws.getCell('A2').value = 'LAPORAN PERTANGGUNGJAWABAN BENDAHARA PENGELUARAN';
+    ws.mergeCells('A3:N3'); ws.getCell('A3').value = '( SPJ BELANJA - FUNGSIONAL )';
+    ['A1', 'A2', 'A3'].forEach(cell => {
+        ws.getCell(cell).alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getCell(cell).font = { bold: true, size: 12 };
+    });
+
+    // Informasi SKPD (Simulasi Text Biasa)
+    ws.getCell('A5').value = 'SKPD: Dinas Komunikasi dan Informatika';
+    ws.getCell('A6').value = 'Tahun Anggaran: 2026';
+    ws.getCell('A7').value = 'Bulan: Mei';
+
+    // MERGE CELLS UNTUK HEADER TABEL BERTINGKAT (Baris 9 & 10)
+    ws.mergeCells('A9:A10'); ws.getCell('A9').value = 'KODE REKENING';
+    ws.mergeCells('B9:B10'); ws.getCell('B9').value = 'URAIAN';
+    ws.mergeCells('C9:C10'); ws.getCell('C9').value = 'ANGGARAN TAHUN INI (Rp)';
+    
+    ws.mergeCells('D9:F9'); ws.getCell('D9').value = 'SPJ - LS GAJI';
+    ws.getCell('D10').value = 's.d Bulan Lalu'; ws.getCell('E10').value = 'Bulan ini'; ws.getCell('F10').value = 's.d Bulan ini';
+    
+    ws.mergeCells('G9:I9'); ws.getCell('G9').value = 'SPJ - LS BARANG DAN JASA';
+    ws.getCell('G10').value = 's.d Bulan Lalu'; ws.getCell('H10').value = 'Bulan ini'; ws.getCell('I10').value = 's.d Bulan ini';
+    
+    ws.mergeCells('J9:L9'); ws.getCell('J9').value = 'SPJ UP / GU / TU';
+    ws.getCell('J10').value = 's.d Bulan Lalu'; ws.getCell('K10').value = 'Bulan ini'; ws.getCell('L10').value = 's.d Bulan ini';
+    
+    ws.mergeCells('M9:M10'); ws.getCell('M9').value = 'Jumlah SPJ\n(LS+UP/GU/TU)\ns.d Bulan ini';
+    ws.mergeCells('N9:N10'); ws.getCell('N9').value = 'Sisa Pagu Anggaran';
+
+    // Baris Nomor Kolom
+    const headerNum = ws.addRow(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']);
+
+    // Styling khusus untuk area Header Tabel (A9:N11)
+    for (let r = 9; r <= 11; r++) {
+        ws.getRow(r).eachCell((cell) => {
+            cell.font = { bold: true, size: 10 };
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            applyBorders(cell);
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+        });
+    }
+    ws.getRow(9).height = 30;
+    ws.getRow(10).height = 25;
+
+    // Masukkan Data SPJ ke dalam kolom yang tepat
+    for (const [kode, data] of Object.entries(databaseSPJ)) {
+        // Pemetaan: Anggaran awal di Kolom 3. Pengeluaran simulasi diletakkan di Kolom 11 (UP/GU/TU Bulan Ini) dan Kolom 13 (Jumlah). Sisa di Kolom 14.
+        const row = ws.addRow([
+            kode, data.uraian, data.anggaranAwal, 
+            0, 0, 0, // LS Gaji
+            0, 0, 0, // LS Barang/Jasa
+            0, data.pengeluaranTotal, data.pengeluaranTotal, // UP/GU/TU (Diasumsikan pengeluaran masuk sini)
+            data.pengeluaranTotal, data.anggaranSisa // Jumlah & Sisa
+        ]);
+        
+        row.eachCell((cell, colNum) => {
+            applyBorders(cell);
+            if (colNum === 2) cell.alignment = { horizontal: 'left', wrapText: true };
+            else cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            
+            if (colNum >= 3) {
+                cell.numFmt = '#,##0.00';
+                // Jika nilai 0, bisa dibuat kosong atau strip, tapi kita biarkan format angka standar
+            }
+        });
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, "SPJ_Belanja_Sumut_Mei_2026.xlsx");
+}
+
 function showSuccessToast() {
     let toast = document.getElementById("customToast");
     if (!toast) {
