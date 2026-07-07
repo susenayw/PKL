@@ -16,60 +16,48 @@
 
     <div class="grid-layout">
         <div class="card">
-            <div class="card-title">
-                Form Input Transaksi BKU
-                <span class="badge">Mei 2026</span>
-            </div>
+            <div class="card-title">Form Alokasi & Transaksi BKU</div>
             
             <form id="bkuForm">
                 <div class="form-group">
-                    <label for="tanggal">Tanggal Transaksi</label>
+                    <label for="tanggal">Tanggal Transaksi / Alokasi</label>
                     <input type="date" id="tanggal" required value="2026-05-01">
                 </div>
 
                 <div class="form-group">
-                    <label for="noBukti">Nomor Bukti Pengeluaran Kas</label>
-                    <input type="text" id="noBukti" placeholder="Contoh: 636/DKI-KEU/V/2026" required>
+                    <label for="noBukti">Nomor Bukti Pengeluaran Kas (Kosongkan jika hanya Alokasi)</label>
+                    <input type="text" id="noBukti" placeholder="Contoh: 636/DKI-KEU/V/2026">
                 </div>
 
-                <div class="form-group">
-                    <label for="kodeRekening">Kode Rekening (Sesuai SPJ Belanja)</label>
-                    <select id="kodeRekening" required>
-                        <option value="">-- Pilih Kode Rekening --</option>
-                        <option value="1.01.0001.5.1.02.01.01.00026">1.01.0001.5.1.02.01.01.00026 (Bahan Cetak)</option>
-                        <option value="1.01.0001.5.1.02.02.02.0001">1.01.0001.5.1.02.02.02.0001 (Honorarium Jasa Kantor)</option>
-                        <option value="1.01.0004.5.1.02.01.01.00026">1.01.0004.5.1.02.01.01.00026 (Bahan Cetak - Koordinasi DPA)</option>
-                        <option value="2.16.03.1.02.0030.5.1.02.02.001.00063">2.16.03.1.02.0030.5.1.02.02.001.00063 (Internet/Kawat/TV)</option>
-                    </select>
-                </div>
+                <div id="dropdownArea">
+                    </div>
 
                 <div class="form-group">
                     <label for="uraian">Uraian / Deskripsi Rekening</label>
-                    <input type="text" id="uraian" class="readonly-field" readonly placeholder="Akan terisi otomatis setelah memilih kode rekening...">
+                    <input type="text" id="uraian" class="readonly-field" readonly placeholder="Akan terisi otomatis setelah memilih rincian terdalam...">
                 </div>
 
                 <div class="form-group">
-                    <label for="anggaran">Anggaran Tahun Ini (Rp)</label>
-                    <input type="text" id="anggaran" class="readonly-field" readonly placeholder="Akan terisi otomatis...">
+                    <label for="alokasi" style="color: #047857; font-weight: 700;">[+] Alokasi / Penambahan Anggaran ke Rincian Ini (Rp)</label>
+                    <input type="text" id="alokasi" placeholder="Contoh: 50.000.000" style="border-color: #34d399;">
                 </div>
 
                 <div class="form-group">
-                    <label for="pengeluaran">Jumlah Pengeluaran Bulan Ini (Rp)</label>
-                    <input type="text" id="pengeluaran" placeholder="Contoh: 10.000.000" required>
+                    <label for="pengeluaran" style="color: #be123c; font-weight: 700;">[-] Jumlah Pengeluaran Bulan Ini (Rp)</label>
+                    <input type="text" id="pengeluaran" placeholder="Contoh: 10.000.000" style="border-color: #fda4af;">
                 </div>
 
                 <div id="budgetInfo" class="budget-info">
-                    Sisa Pagu Anggaran Rekening setelah pengeluaran ini: <strong id="sisaAnggaran">Rp -</strong>
-                </div>
+                    </div>
 
-                <button type="submit" class="btn">Simpan Transaksi ke BKU</button>
+                <button type="submit" class="btn">Simpan Data ke Database</button>
             </form>
         </div>
 
         <div class="card">
             <div class="card-title">Referensi Kamus Kode Rekening (SPJ Belanja)</div>
             <p style="font-size: 13px; color: #6b7280; margin-bottom: 15px;">
-                Tabel di bawah memuat data pagu dari dokumen <strong>SPJ Belanja</strong> yang disinkronkan secara otomatis ke dalam pilihan form.
+                Tabel di bawah memuat data pagu dari dokumen <strong>SPJ Belanja</strong> yang disinkronkan secara otomatis.
             </p>
             <div class="table-container">
                 <table id="spjTable">
@@ -77,7 +65,7 @@
                         <tr>
                             <th>Kode Rekening</th>
                             <th>Uraian Rekening</th>
-                            <th>Anggaran Tahun Ini</th>
+                            <th>Sisa Anggaran</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -86,8 +74,8 @@
             </div>
             
             <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button id="btnDownloadBKU" class="btn" style="background-color: #1e3a8a; flex: 1;">⬇ Download BKU</button>
-                <button id="btnDownloadSPJ" class="btn" style="background-color: #047857; flex: 1;">⬇ Download SPJ</button>
+                <button type="button" id="btnDownloadBKU" class="btn" style="background-color: #1e3a8a; flex: 1;">⬇ Download BKU</button>
+                <button type="button" id="btnDownloadSPJ" class="btn" style="background-color: #047857; flex: 1;">⬇ Download SPJ</button>
             </div>
         </div>
     </div>
