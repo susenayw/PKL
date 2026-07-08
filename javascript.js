@@ -7,7 +7,6 @@ function formatRupiah(angka) {
     return "Rp " + new Intl.NumberFormat('id-ID').format(angka);
 }
 
-// Format penamaan file bulan dinamis
 function getNamaBulanTahun(dateString) {
     if(!dateString) return "Bulan_Ini";
     const date = new Date(dateString);
@@ -26,24 +25,36 @@ document.addEventListener("DOMContentLoaded", function() {
     setupEventListeners();
 });
 
-// LOGIKA FLEKSIBEL 1: Mengecek apakah suatu kode adalah "Kepala/Induk" (punya anak cabang)
+// LOGIKA 1: Cek apakah sebuah kode bertindak sebagai Induk
 function isParent(kode) {
     return hierarkiSPJ.some(item => item.kode !== kode && item.kode.startsWith(kode + "."));
 }
 
-// LOGIKA FLEKSIBEL 2: Menghitung kedalaman cabang (untuk indentasi tabel) tanpa batasan segmen
+// LOGIKA 2: Mencari Induk Langsung dari sebuah kode baru
+// Contoh: 1.0.2 -> mencari 1.0
+function getParent(kode) {
+    let segments = kode.split('.');
+    while (segments.length > 1) {
+        segments.pop();
+        let parentKode = segments.join('.');
+        let parentIndex = hierarkiSPJ.findIndex(i => i.kode === parentKode);
+        if (parentIndex !== -1) return hierarkiSPJ[parentIndex];
+    }
+    return null;
+}
+
+// LOGIKA 3: Menghitung Kedalaman Cabang
 function getDepth(kode) {
-    // Menghitung ada berapa banyak 'leluhur' (induk) yang dimiliki kode ini di database
     return hierarkiSPJ.filter(item => item.kode !== kode && kode.startsWith(item.kode + ".")).length;
 }
 
-// Render Tabel SPJ Berjenjang di Layar Kanan
+// Render Tabel SPJ Berjenjang
 function renderSPJTable(updatedKode = null) {
     const tbody = document.querySelector("#spjTable tbody");
     tbody.innerHTML = ""; 
     
     if (hierarkiSPJ.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #9ca3af; font-style: italic;">Database kosong. Silakan buat rekening baru.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #9ca3af; font-style: italic;">Database kosong. Silakan buat rekening kepala baru.</td></tr>`;
         return;
     }
 
@@ -51,10 +62,7 @@ function renderSPJTable(updatedKode = null) {
         const parentStatus = isParent(data.kode);
         const depthLevel = getDepth(data.kode);
         
-        // Jika dia adalah induk (punya anak), cetak tebal. Jika tidak, cetak miring.
         let styleStr = parentStatus ? "font-weight: 700; color: #111827;" : "font-style: italic; color: #4b5563;";
-        
-        // Indentasi dinamis berdasarkan jumlah leluhurnya (20px per level)
         let indentPx = depthLevel * 20; 
 
         const row = document.createElement("tr");
@@ -64,14 +72,14 @@ function renderSPJTable(updatedKode = null) {
             <td style="${styleStr}">${formatRupiah(data.anggaranSisa)}</td>
         `;
 
-        // Highlight merah pudar jika baris ini dipotong anggarannya
+        // Highlight merah muda untuk pemotongan
         if (updatedKode && (updatedKode === data.kode || updatedKode.startsWith(data.kode + "."))) {
             row.style.backgroundColor = "#fecdd3"; 
             row.style.transition = "background-color 2.5s ease"; 
             setTimeout(() => { row.style.backgroundColor = ""; }, 2500);
         }
         
-        // Highlight hijau pudar jika baris ini baru di-alokasi uangnya
+        // Highlight hijau tosca untuk penambahan/alokasi
         if (updatedKode === "ADD_" + data.kode) {
             row.style.backgroundColor = "#ccfbf1"; 
             row.style.transition = "background-color 2.5s ease"; 
@@ -133,25 +141,47 @@ function setupEventListeners() {
         const uraian = document.getElementById("newUraian").value.trim();
         const alokasi = parseFloat(inputAlokasi.value.replace(/\./g, '')) || 0;
 
-        // Cek apakah rekening sudah ada di database
+        // VALIDASI 1: Jika rekening adalah anak cabang (memiliki titik)
+        if (kode.includes('.')) {
+            let parent = getParent(kode);
+            
+            // Syarat Induk harus dibuat lebih dahulu
+            if (!parent) {
+                alert(`[DITOLAK] Kepala Rekening/Induk dari '${kode}' belum dibuat!\n\nHarap daftarkan dompet kepalanya terlebih dahulu.`);
+                return;
+            }
+            
+            // Syarat Alokasi anak tidak boleh melebihi sisa dompet Induk yang belum dibagikan
+            if (alokasi > parent.unallocated) {
+                alert(`[LIMIT TERCAPAI] Alokasi ditolak!\n\nDompet Induk (${parent.kode}) tidak memiliki dana yang cukup.\nSisa uang Induk yang bisa dibagikan ke cabang hanya: ${formatRupiah(parent.unallocated)}`);
+                return;
+            }
+            
+            // Jika lolos, potong kuota alokasi dari Induknya
+            parent.unallocated -= alokasi;
+        }
+
         const existingIndex = hierarkiSPJ.findIndex(i => i.kode === kode);
         
         if (existingIndex !== -1) {
             hierarkiSPJ[existingIndex].anggaranAwal += alokasi;
             hierarkiSPJ[existingIndex].anggaranSisa += alokasi;
+            hierarkiSPJ[existingIndex].unallocated += alokasi; // Dana tambahan ini bebas dibagikan ke anak di bawahnya lagi
             showToast(`✔ Dompet Rekening ${kode} berhasil ditambah.`);
         } else {
+            // PROPERTI BARU: unallocated (Dana yang belum didistribusikan ke anak)
             hierarkiSPJ.push({
                 kode: kode,
                 uraian: uraian,
                 anggaranAwal: alokasi,
                 anggaranSisa: alokasi,
+                unallocated: alokasi, 
                 pengeluaranTotal: 0
             });
             showToast(`✔ Rekening baru berhasil didaftarkan.`);
         }
 
-        // Smart Sorting: Mengurutkan otomatis apapun format angkanya
+        // Smart Sorting untuk hierarki
         hierarkiSPJ.sort((a, b) => a.kode.localeCompare(b.kode, undefined, {numeric: true}));
 
         formRekening.reset();
@@ -189,6 +219,12 @@ function setupEventListeners() {
         }
 
         const itemTarget = hierarkiSPJ.find(i => i.kode === kodeTarget);
+
+        // Validasi: Pengeluaran tidak boleh melebihi sisa anggaran di rekening tersebut
+        if (pengeluaran > itemTarget.anggaranSisa) {
+            alert(`Pengeluaran ditolak! Sisa anggaran di rekening ini tidak mencukupi.`);
+            return;
+        }
 
         // 1. Catat ke Riwayat Kas BKU
         saldoKasSaatIni -= pengeluaran;
@@ -282,7 +318,7 @@ async function generateExcelBKU() {
 }
 
 // -------------------------------------------------------------
-// FUNGSI EXPORT EXCEL SPJ (Sinkron dengan Logika Fleksibel)
+// FUNGSI EXPORT EXCEL SPJ 
 // -------------------------------------------------------------
 async function generateExcelSPJ() {
     if (hierarkiSPJ.length === 0) {
@@ -340,7 +376,6 @@ async function generateExcelSPJ() {
     }
 
     hierarkiSPJ.forEach(data => {
-        // Implementasi logika kedalaman dinamis pada Excel
         const parentStatus = isParent(data.kode);
         const depthLevel = getDepth(data.kode);
 
@@ -397,5 +432,5 @@ function showToast(message) {
     setTimeout(() => {
         toast.style.opacity = "0";
         setTimeout(() => { toast.style.display = "none"; }, 300);
-    }, 3500);
+    }, 4000);
 }
