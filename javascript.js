@@ -21,17 +21,61 @@ function getNamaBulanHeader(dateString) {
     return months[date.getMonth()];
 }
 
+// =================================================================
+// [MERGE UPGRADE]: SESSION GUARD & LOGOUT BUTTON
+// =================================================================
 document.addEventListener("DOMContentLoaded", function() {
+    
+    // 1. Cek Sesi Login dari Branch Teman
+    if (sessionStorage.getItem('sesi_login_diskominfo') !== 'aktif') {
+        alert("Akses Ditolak! Anda harus login terlebih dahulu.");
+        window.location.assign('login.html');
+        return; 
+    }
+
+    // 2. Suntikkan Tombol Logout ke Header secara Dinamis
+    buatTombolLogout();
+
+    // 3. Jalankan Aplikasi Normal
     setupEventListeners();
 });
 
-// LOGIKA 1: Cek apakah sebuah kode bertindak sebagai Induk
+function buatTombolLogout() {
+    const header = document.querySelector('header');
+    if(header) {
+        header.style.position = 'relative'; // Pastikan header bisa di-absolute-kan
+        
+        const btnLogout = document.createElement('button');
+        btnLogout.innerHTML = 'Keluar / Logout';
+        btnLogout.style.position = 'absolute';
+        btnLogout.style.top = '20px';
+        btnLogout.style.right = '20px';
+        btnLogout.style.padding = '8px 16px';
+        btnLogout.style.backgroundColor = '#be123c';
+        btnLogout.style.color = 'white';
+        btnLogout.style.border = 'none';
+        btnLogout.style.borderRadius = '6px';
+        btnLogout.style.fontWeight = 'bold';
+        btnLogout.style.cursor = 'pointer';
+        btnLogout.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        
+        btnLogout.addEventListener('mouseover', () => btnLogout.style.backgroundColor = '#9f1239');
+        btnLogout.addEventListener('mouseout', () => btnLogout.style.backgroundColor = '#be123c');
+        
+        btnLogout.addEventListener('click', function() {
+            sessionStorage.removeItem('sesi_login_diskominfo');
+            window.location.assign('login.html');
+        });
+        
+        header.appendChild(btnLogout);
+    }
+}
+// =================================================================
+
 function isParent(kode) {
     return hierarkiSPJ.some(item => item.kode !== kode && item.kode.startsWith(kode + "."));
 }
 
-// LOGIKA 2: Mencari Induk Langsung dari sebuah kode baru
-// Contoh: 1.0.2 -> mencari 1.0
 function getParent(kode) {
     let segments = kode.split('.');
     while (segments.length > 1) {
@@ -43,12 +87,10 @@ function getParent(kode) {
     return null;
 }
 
-// LOGIKA 3: Menghitung Kedalaman Cabang
 function getDepth(kode) {
     return hierarkiSPJ.filter(item => item.kode !== kode && kode.startsWith(item.kode + ".")).length;
 }
 
-// Render Tabel SPJ Berjenjang
 function renderSPJTable(updatedKode = null) {
     const tbody = document.querySelector("#spjTable tbody");
     tbody.innerHTML = ""; 
@@ -72,14 +114,12 @@ function renderSPJTable(updatedKode = null) {
             <td style="${styleStr}">${formatRupiah(data.anggaranSisa)}</td>
         `;
 
-        // Highlight merah muda untuk pemotongan
         if (updatedKode && (updatedKode === data.kode || updatedKode.startsWith(data.kode + "."))) {
             row.style.backgroundColor = "#fecdd3"; 
             row.style.transition = "background-color 2.5s ease"; 
             setTimeout(() => { row.style.backgroundColor = ""; }, 2500);
         }
         
-        // Highlight hijau tosca untuk penambahan/alokasi
         if (updatedKode === "ADD_" + data.kode) {
             row.style.backgroundColor = "#ccfbf1"; 
             row.style.transition = "background-color 2.5s ease"; 
@@ -90,7 +130,6 @@ function renderSPJTable(updatedKode = null) {
     });
 }
 
-// Render Dropdown untuk Form Transaksi
 function updateDropdownTransaksi() {
     const select = document.getElementById("pilihRekening");
     select.innerHTML = '<option value="">-- Pilih Rekening --</option>';
@@ -119,7 +158,6 @@ function setupEventListeners() {
     const btnDownloadBKU = document.getElementById("btnDownloadBKU");
     const btnDownloadSPJ = document.getElementById("btnDownloadSPJ");
 
-    // Format Input Angka Otomatis saat diketik
     [inputAlokasi, inputPengeluaran].forEach(input => {
         input.addEventListener("input", function(e) {
             let rawValue = this.value.replace(/[^0-9]/g, '');
@@ -131,9 +169,6 @@ function setupEventListeners() {
         });
     });
 
-    // ==========================================
-    // AKSI 1: TAMBAH KODE REKENING / ALOKASI BARU
-    // ==========================================
     formRekening.addEventListener("submit", function(e) {
         e.preventDefault();
         
@@ -141,23 +176,19 @@ function setupEventListeners() {
         const uraian = document.getElementById("newUraian").value.trim();
         const alokasi = parseFloat(inputAlokasi.value.replace(/\./g, '')) || 0;
 
-        // VALIDASI 1: Jika rekening adalah anak cabang (memiliki titik)
         if (kode.includes('.')) {
             let parent = getParent(kode);
             
-            // Syarat Induk harus dibuat lebih dahulu
             if (!parent) {
                 alert(`[DITOLAK] Kepala Rekening/Induk dari '${kode}' belum dibuat!\n\nHarap daftarkan dompet kepalanya terlebih dahulu.`);
                 return;
             }
             
-            // Syarat Alokasi anak tidak boleh melebihi sisa dompet Induk yang belum dibagikan
             if (alokasi > parent.unallocated) {
                 alert(`[LIMIT TERCAPAI] Alokasi ditolak!\n\nDompet Induk (${parent.kode}) tidak memiliki dana yang cukup.\nSisa uang Induk yang bisa dibagikan ke cabang hanya: ${formatRupiah(parent.unallocated)}`);
                 return;
             }
             
-            // Jika lolos, potong kuota alokasi dari Induknya
             parent.unallocated -= alokasi;
         }
 
@@ -166,10 +197,9 @@ function setupEventListeners() {
         if (existingIndex !== -1) {
             hierarkiSPJ[existingIndex].anggaranAwal += alokasi;
             hierarkiSPJ[existingIndex].anggaranSisa += alokasi;
-            hierarkiSPJ[existingIndex].unallocated += alokasi; // Dana tambahan ini bebas dibagikan ke anak di bawahnya lagi
+            hierarkiSPJ[existingIndex].unallocated += alokasi; 
             showToast(`✔ Dompet Rekening ${kode} berhasil ditambah.`);
         } else {
-            // PROPERTI BARU: unallocated (Dana yang belum didistribusikan ke anak)
             hierarkiSPJ.push({
                 kode: kode,
                 uraian: uraian,
@@ -181,7 +211,6 @@ function setupEventListeners() {
             showToast(`✔ Rekening baru berhasil didaftarkan.`);
         }
 
-        // Smart Sorting untuk hierarki
         hierarkiSPJ.sort((a, b) => a.kode.localeCompare(b.kode, undefined, {numeric: true}));
 
         formRekening.reset();
@@ -189,9 +218,6 @@ function setupEventListeners() {
         updateDropdownTransaksi();
     });
 
-    // ==========================================
-    // AKSI 2: PENGELUARAN (POTONG DOMPET BERJENJANG)
-    // ==========================================
     pilihRekening.addEventListener("change", function() {
         const item = hierarkiSPJ.find(i => i.kode === this.value);
         const info = document.getElementById("budgetInfo");
@@ -220,13 +246,11 @@ function setupEventListeners() {
 
         const itemTarget = hierarkiSPJ.find(i => i.kode === kodeTarget);
 
-        // Validasi: Pengeluaran tidak boleh melebihi sisa anggaran di rekening tersebut
         if (pengeluaran > itemTarget.anggaranSisa) {
             alert(`Pengeluaran ditolak! Sisa anggaran di rekening ini tidak mencukupi.`);
             return;
         }
 
-        // 1. Catat ke Riwayat Kas BKU
         saldoKasSaatIni -= pengeluaran;
         riwayatBKU.push({
             noUrut: riwayatBKU.length + 1,
@@ -239,7 +263,6 @@ function setupEventListeners() {
             saldo: saldoKasSaatIni
         });
 
-        // 2. Pemotongan Dana Berjenjang (Anak memotong Kepala secara presisi)
         hierarkiSPJ.forEach(item => {
             if (kodeTarget === item.kode || kodeTarget.startsWith(item.kode + ".")) {
                 item.anggaranSisa -= pengeluaran;
@@ -257,14 +280,10 @@ function setupEventListeners() {
     btnDownloadSPJ.addEventListener("click", generateExcelSPJ);
 }
 
-// Helper Garis Tabel ExcelJS
 function applyBorders(cell) {
     cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 }
 
-// -------------------------------------------------------------
-// FUNGSI EXPORT EXCEL BKU
-// -------------------------------------------------------------
 async function generateExcelBKU() {
     if (riwayatBKU.length === 0) {
         alert("Belum ada transaksi BKU yang diinput.");
@@ -317,9 +336,6 @@ async function generateExcelBKU() {
     saveAs(blob, `BKU_Sumut_${bulanStr}.xlsx`);
 }
 
-// -------------------------------------------------------------
-// FUNGSI EXPORT EXCEL SPJ 
-// -------------------------------------------------------------
 async function generateExcelSPJ() {
     if (hierarkiSPJ.length === 0) {
         alert("Database kosong. Tidak ada SPJ yang bisa diekspor.");

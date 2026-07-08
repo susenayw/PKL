@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Sistem Integrasi BKU & SPJ Belanja</title>
+    <title>Login & Register - Sistem Integrasi BKU & SPJ</title>
     <style>
         :root {
             --primary-blue: #1e3a8a;
@@ -19,7 +19,7 @@
         }
 
         body {
-            background-image: url('background.jpg');
+            background-image: url('pictures/homepage\ background.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -55,6 +55,7 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             overflow: hidden;
             border-top: 6px solid var(--accent-gold);
+            transition: height 0.3s ease;
         }
 
         .login-header {
@@ -68,15 +69,12 @@
         .login-header h2 {
             font-size: 22px;
             font-weight: 700;
-            letter-spacing: 0.5px;
             margin-bottom: 6px;
-            text-transform: uppercase;
         }
 
         .login-header p {
             font-size: 13px;
             opacity: 0.85;
-            line-height: 1.4;
         }
 
         .login-form {
@@ -101,8 +99,6 @@
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             font-size: 14px;
-            color: var(--text-dark);
-            background-color: #ffffff;
             transition: all 0.2s ease;
         }
 
@@ -123,32 +119,49 @@
             cursor: pointer;
             width: 100%;
             margin-top: 10px;
-            box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.3);
             transition: all 0.2s;
         }
 
-        .btn-login:hover {
-            background: linear-gradient(135deg, #1e40af, #172554);
-            transform: translateY(-1px);
+        .btn-register {
+            background: linear-gradient(135deg, #047857, #059669);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            display: none; 
         }
 
-        .error-message {
-            background-color: #fef2f2;
-            border-left: 4px solid #ef4444;
-            color: #b91c1c;
+        .toggle-link {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 13px;
+            color: var(--primary-blue);
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .toggle-link:hover {
+            text-decoration: underline;
+        }
+
+        .pesan-sistem {
             padding: 10px 12px;
             border-radius: 6px;
             font-size: 13px;
             margin-bottom: 15px;
             display: none;
             font-weight: 500;
+            text-align: center;
         }
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-6px); }
-            75% { transform: translateX(6px); }
-        }
+        .error { background-color: #fef2f2; color: #b91c1c; border-left: 4px solid #ef4444; }
+        .sukses { background-color: #f0fdf4; color: #15803d; border-left: 4px solid #22c55e; }
+
     </style>
 </head>
 <body>
@@ -158,13 +171,11 @@
     <div class="login-container">
         <div class="login-header">
             <h2>DISKOMINFO SUMUT</h2>
-            <p>Sistem Integrasi BKU & SPJ Belanja</p>
+            <p id="teksHeader">Sistem Integrasi BKU & SPJ Belanja</p>
         </div>
         
         <div class="login-form">
-            <div id="errorMessage" class="error-message">
-                Username atau Password salah!
-            </div>
+            <div id="pesanNotif" class="pesan-sistem"></div>
 
             <div class="form-group">
                 <label for="username">Username</label>
@@ -176,40 +187,83 @@
                 <input type="password" id="password" placeholder="Masukkan password">
             </div>
 
-            <button type="button" id="btnProsesLogin" class="btn-login">Masuk ke Sistem</button>
+            <button type="button" id="btnLogin" class="btn-login">Masuk ke Sistem</button>
+            <button type="button" id="btnRegister" class="btn-register">Daftarkan Akun Baru</button>
+
+            <div class="toggle-link" id="toggleMode">Belum punya akun? Daftar di sini</div>
         </div>
     </div>
 
     <script>
-        // Memicu fungsi login saat tombol diklik
-        document.getElementById('btnProsesLogin').addEventListener('click', jalankanVerifikasi);
+        let isModeLogin = true; 
+        const judulHeader = document.getElementById('teksHeader');
+        const btnLogin = document.getElementById('btnLogin');
+        const btnRegister = document.getElementById('btnRegister');
+        const toggleMode = document.getElementById('toggleMode');
+        const pesanNotif = document.getElementById('pesanNotif');
+        const inputUser = document.getElementById('username');
+        const inputPass = document.getElementById('password');
 
-        // Memicu fungsi login jika user menekan tombol 'Enter' saat mengetik password
-        document.getElementById('password').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') jalankanVerifikasi();
+        function tampilkanPesan(pesan, tipe) {
+            pesanNotif.textContent = pesan;
+            pesanNotif.className = `pesan-sistem ${tipe}`;
+            pesanNotif.style.display = 'block';
+        }
+
+        toggleMode.addEventListener('click', function() {
+            isModeLogin = !isModeLogin; 
+            pesanNotif.style.display = 'none'; 
+            inputUser.value = ''; inputPass.value = ''; 
+
+            if (isModeLogin) {
+                judulHeader.textContent = "Sistem Integrasi BKU & SPJ Belanja";
+                btnLogin.style.display = 'block';
+                btnRegister.style.display = 'none';
+                toggleMode.textContent = "Belum punya akun? Daftar di sini";
+            } else {
+                judulHeader.textContent = "Pendaftaran Akun Baru";
+                btnLogin.style.display = 'none';
+                btnRegister.style.display = 'block';
+                toggleMode.textContent = "Sudah punya akun? Kembali ke Login";
+            }
         });
 
-        function jalankanVerifikasi() {
-            const userVal = document.getElementById('username').value.trim();
-            const passVal = document.getElementById('password').value.trim();
-            const errorMsg = document.getElementById('errorMessage');
+        btnRegister.addEventListener('click', function() {
+            const user = inputUser.value.trim();
+            const pass = inputPass.value.trim();
 
-            // Kredensial Dummy
-            if (userVal === 'admin' && passVal === 'password123') {
-                errorMsg.style.display = 'none';
+            if (user === '' || pass === '') {
+                tampilkanPesan("Username dan Password tidak boleh kosong!", "error");
+                return;
+            }
+
+            const dataAkun = { username: user, password: pass };
+            localStorage.setItem('akun_diskominfo', JSON.stringify(dataAkun));
+            tampilkanPesan("Akun berhasil didaftarkan! Silakan klik 'Kembali ke Login'.", "sukses");
+        });
+
+        btnLogin.addEventListener('click', function() {
+            const user = inputUser.value.trim();
+            const pass = inputPass.value.trim();
+
+            const akunTersimpan = JSON.parse(localStorage.getItem('akun_diskominfo'));
+
+            if (!akunTersimpan) {
+                tampilkanPesan("Belum ada akun yang terdaftar. Silakan daftar dulu!", "error");
+                return;
+            }
+
+            if (user === akunTersimpan.username && pass === akunTersimpan.password) {
+                pesanNotif.style.display = 'none';
                 
-                // Gunakan assign secara langsung ke file utama Anda
+                // [MERGE UPGRADE]: Set Session Storage agar Main App tahu user sudah login resmi
+                sessionStorage.setItem('sesi_login_diskominfo', 'aktif');
+                
                 window.location.assign('index.html');
             } else {
-                errorMsg.style.display = 'block';
-                
-                // Efek getar kotak login jika salah kredensial
-                const loginBox = document.querySelector('.login-container');
-                loginBox.style.animation = 'none';
-                void loginBox.offsetWidth; 
-                loginBox.style.animation = 'shake 0.3s ease-in-out';
+                tampilkanPesan("Username atau Password salah!", "error");
             }
-        }
+        });
     </script>
 
 </body>
