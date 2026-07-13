@@ -10,10 +10,6 @@
 
 <div class="container">
     <header style="position: relative;">
-        <button onclick="window.location.replace('./login.html')" style="position: absolute; top: 20px; right: 20px; background-color: #be123c; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: 0.2s;">
-            ⎋ Logout
-        </button>
-
         <h1>Dinas Komunikasi dan Informatika Provinsi Sumatera Utara</h1>
         <p>Sistem Penyelarasan Buku Kas Umum (BKU) & Laporan SPJ Belanja</p>
     </header>
@@ -84,11 +80,12 @@
                             <th>Kode Rekening</th>
                             <th>Uraian Rekening</th>
                             <th>Sisa Anggaran</th>
+                            <th style="text-align: center;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="3" style="text-align: center; color: #9ca3af; font-style: italic;">Database kosong. Silakan buat rekening baru.</td>
+                            <td colspan="4" style="text-align: center; color: #9ca3af; font-style: italic;">Database kosong. Silakan buat rekening baru.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -105,6 +102,5 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="javascript.js"></script>
-
 </body>
 </html>
